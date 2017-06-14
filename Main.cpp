@@ -58,15 +58,16 @@ int main() {
 /*/////////////////// BAZA WEJSCIOWA ////////////////////
 \/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/*/
 	
-	read_directory("test_faces/jedrzej", label_iterator, images, labels, color_images);
-	read_directory("test_faces/iwona", label_iterator, images, labels, color_images);
+	//read_directory("test_faces/jedrzej", label_iterator, images, labels, color_images);
+	//read_directory("test_faces/iwona", label_iterator, images, labels, color_images);
 
 /* /\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
 /////////////////// BAZA WEJSCIOWA //////////////////// */	
 
 	//najwazniejsza rzecz projektu ;d 
 	Ptr<FaceRecognizer> model = createLBPHFaceRecognizer();
-	model->train(images, labels);
+	if (images.size() > 0)
+		model->train(images, labels);
 
 	//tutaj jest klasyfikator specjalny, on opiera sie na xml jakims dzikim i sluzy do znajdowania pionowych twarzy na obrazie - izi
 	String face_cascade_name = "haarcascade_frontalface_alt.xml";
@@ -149,13 +150,14 @@ int main() {
 		//p i P - oblicza prawdopodobienstwo ze dana mordka jest czyjas
 		else if (key == 80 || key == 112)  { 
 			cout << "Calculating new prediction ..."<<endl;
-			for (int i = 0; i < faces.size(); i++) {
-				Rect face_i = faces[i];
-				Mat face = gray(face_i);
-				Mat face_resized;
-				cv::resize(face, face_resized, Size(im_width, im_height), 1.0, 1.0, INTER_CUBIC);
-				prediction = model->predict(face_resized);
-			}
+			if (images.size() > 0)
+				for (int i = 0; i < faces.size(); i++) {
+					Rect face_i = faces[i];
+					Mat face = gray(face_i);
+					Mat face_resized;
+					cv::resize(face, face_resized, Size(im_width, im_height), 1.0, 1.0, INTER_CUBIC);
+					prediction = model->predict(face_resized);
+				}
 		}
 		//s i S - zapisuje ew. zdjecie do nowej bazy
 		else if (key == 83 || key == 115) {
