@@ -46,7 +46,6 @@ public:
 		next_person = true;
 		label_iterator = 1;
 		model = createLBPHFaceRecognizer();
-		fullfil_database();
 	}
 
 	int start_camera_tracking() {
@@ -138,8 +137,10 @@ public:
 			break;
 		case 78://n i N 
 		case 110:
-			next_person = true;
-			label_iterator++;
+			if (next_person == false) {
+				next_person = true;
+				label_iterator++;
+			}
 			cout << "You can add new person photos!" << endl;
 			break;
 		default:
@@ -152,7 +153,7 @@ public:
 
 	void track() {
 		start_camera_tracking();
-
+		fulfill_database();
 		for (;;)
 		{
 			Mat frame;
@@ -220,7 +221,7 @@ public:
 		label_iterator++;
 	}
 
-	void fullfil_database(){
+	void fulfill_database(){
 		//read_directory("test_faces/iwona");
 		//read_directory("test_faces/szwagier");
 		//read_directory("test_faces/jagoda");
@@ -229,6 +230,8 @@ public:
 		//read_directory("test_faces/a");
 		//read_directory("test_faces/b");
 		//read_directory("test_faces/c");
+		read_directory("test_faces/RyanGosling");
+		read_directory("test_faces/AngelinaJolie");
 		if (images.size() > 0)
 			model->train(images, labels);
 	}
