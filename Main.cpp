@@ -11,15 +11,11 @@
 #include <sys/stat.h>
 #include <stdio.h>
 
-
-
 using namespace cv;
 using namespace cv::face;
 using namespace std;
 
-
 class Classifier {
-
 
 };
 
@@ -30,11 +26,9 @@ private :
 public:
 	Cascade(String xmlFile) {
 		haar_cascade.load(xmlFile);
-
 	}
 	void mutliScaleDetection(vector< Rect_<int> > * faces, Mat & gray) {
 		haar_cascade.detectMultiScale(gray, *faces);
-
 	}
 };
 
@@ -71,7 +65,6 @@ public:
 	}
 	DataBase(Cascade * classifier, int face_size) :classifier(classifier),face_size(face_size),label_iterator(1) {
 
-
 	}
 	void read_directory(const string& directory) {
 		vector<String> filenames;
@@ -81,7 +74,7 @@ public:
 		{
 			Mat src = imread(filenames[i]);
 			if (i == 0)
-				color_images.push_back(src); //tu do poprawy bo moga byc zle zdjecia co nie?
+				color_images.push_back(src); 
 			if (!src.data)
 				cerr << "Problem loading image!!!" << endl;
 			read_image(filenames[i], label_iterator);
@@ -110,14 +103,11 @@ public:
 		cvtColor(new_frame, new_frame, CV_BGR2GRAY);
 
 		vector< Rect_<int> > faces;
-		//haar_cascade.detectMultiScale(new_frame, faces);
 		classifier->mutliScaleDetection(&faces, new_frame);
 		if (faces.size()) {
 			Rect face_i = faces[0];
 			Mat face = new_frame(face_i);
-
 			cv::resize(face, face, Size(face_size, face_size), 1.0, 1.0, INTER_CUBIC);
-			 
 			images.push_back(face);
 			labels.push_back(label);
 		}
@@ -126,7 +116,6 @@ public:
 		return images.size();
 	}
 };
-
 
 class Face_recognizer {
 private:
@@ -219,7 +208,6 @@ public:
 		Mat frame_copy = frame_input.clone();
 		Mat gray;
 		cvtColor(frame_copy, gray, CV_BGR2GRAY);
-
 		
 		string deeper_dir;
 		int key = waitKey(30);
@@ -239,75 +227,75 @@ public:
 				break;
 			}
 		else
-		switch (key)
-		{
-		case 27://escape
-			return -1;
-			break;
-		case 32://spacja
-			dataBase->read_frame(frame_copy, dataBase->getLabelIterator(), next_person);
-			if (next_person)
-				next_person = false;
+			switch (key)
+			{
+			case 27://escape
+				return -1;
+				break;
+			case 32://spacja
+				dataBase->read_frame(frame_copy, dataBase->getLabelIterator(), next_person);
+				if (next_person)
+					next_person = false;
 
-			deeper_dir = dir + "/" + std::to_string(dataBase->getLabelIterator());
-			_mkdir(deeper_dir.c_str());
-			imwrite(deeper_dir + "/" + std::to_string(image_iter) + ".jpg", frame_copy);
-			image_iter++;
-			box_text = format("Image has been saved.");
-			break;
-		case 80://p i P 
-		case 112:
-			cout << "Calculating new prediction ..." << endl;
-			if (dataBase->getImagesSize() > 0)
-				for (int i = 0; i < faces.size(); i++) {
-					Rect face_i = faces[i];
-					Mat face = gray(face_i);
-					Mat face_resized;
-					cv::resize(face, face_resized, Size(face_size, face_size), 1.0, 1.0, INTER_CUBIC);
-					prediction = model->predict(face_resized);
-					box_text = format("Matching object to number %d:", prediction);
+				deeper_dir = dir + "/" + std::to_string(dataBase->getLabelIterator());
+				_mkdir(deeper_dir.c_str());
+				imwrite(deeper_dir + "/" + std::to_string(image_iter) + ".jpg", frame_copy);
+				image_iter++;
+				box_text = format("Image has been saved.");
+				break;
+			case 80://p i P 
+			case 112:
+				cout << "Calculating new prediction ..." << endl;
+				if (dataBase->getImagesSize() > 0)
+					for (int i = 0; i < faces.size(); i++) {
+						Rect face_i = faces[i];
+						Mat face = gray(face_i);
+						Mat face_resized;
+						cv::resize(face, face_resized, Size(face_size, face_size), 1.0, 1.0, INTER_CUBIC);
+						prediction = model->predict(face_resized);
+						box_text = format("Matching object to number %d:", prediction);
+					}
+				break;
+			case 84://t i T
+			case 116:
+				box_text = format("Training ...");
+				model->train(*(dataBase->getImages()), *(dataBase->getLabes()));
+				break;
+			case 78://n i N 
+			case 110:
+				if (next_person == false) {
+					next_person = true;
+					dataBase->incrementLabelIterator();
+					image_iter = 0;
 				}
-			break;
-		case 84://t i T
-		case 116:
-			box_text = format("Training ...");
-			model->train(*(dataBase->getImages()), *(dataBase->getLabes()));
-			break;
-		case 78://n i N 
-		case 110:
-			if (next_person == false) {
-				next_person = true;
-				dataBase->incrementLabelIterator();
-				image_iter = 0;
+				box_text = format("You can add new person photos!");
+				break;
+			case 'C':
+			case 'c':
+				enabled = !enabled;
+				if(enabled)
+					box_text = format("Algorithm is working!");
+				else
+					box_text = format("Algorithm stopped. Use C to start again.");
+				break;
+			case 49://1
+				model = createLBPHFaceRecognizer();
+				model->train(*(dataBase->getImages()), *(dataBase->getLabes()));
+				box_text = format("LBPHFaceRecognizer enabled.");
+				break;
+			case 50://2
+				model = createEigenFaceRecognizer();
+				model->train(*(dataBase->getImages()), *(dataBase->getLabes()));
+				box_text = format("EigenFaceRecognizer enabled.");
+				break;
+			case 51://3
+				model = createFisherFaceRecognizer();
+				model->train(*(dataBase->getImages()), *(dataBase->getLabes()));
+				box_text = format("FisherFaceRecognizer enabled.");
+				break;
+			default:
+				break;
 			}
-			box_text = format("You can add new person photos!");
-			break;
-		case 'C':
-		case 'c':
-			enabled = !enabled;
-			if(enabled)
-				box_text = format("Algorithm is working!");
-			else
-				box_text = format("Algorithm stopped. Use C to start again.");
-			break;
-		case 49://1
-			model = createLBPHFaceRecognizer();
-			model->train(*(dataBase->getImages()), *(dataBase->getLabes()));
-			box_text = format("LBPHFaceRecognizer enabled.");
-			break;
-		case 50://2
-			model = createEigenFaceRecognizer();
-			model->train(*(dataBase->getImages()), *(dataBase->getLabes()));
-			box_text = format("EigenFaceRecognizer enabled.");
-			break;
-		case 51://3
-			model = createFisherFaceRecognizer();
-			model->train(*(dataBase->getImages()), *(dataBase->getLabes()));
-			box_text = format("FisherFaceRecognizer enabled.");
-			break;
-		default:
-			break;
-		}
 
 	}
 	 
@@ -323,7 +311,6 @@ public:
 			Mat gray;
 			cvtColor(frame, gray, CV_BGR2GRAY);
 			
-		// 	haar_cascade.detectMultiScale(gray, faces);
 			if(enabled)
 				classifier->mutliScaleDetection(&faces,gray);
 			display_output(frame, faces);
@@ -352,10 +339,9 @@ public:
 	}
 
 };
- 
+
  
 int main() {
-
 	Face_recognizer recognizer;
 	recognizer.track();
 
