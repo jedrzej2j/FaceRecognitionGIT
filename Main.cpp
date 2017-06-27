@@ -8,6 +8,9 @@
 #include "opencv2/face.hpp"
 #include "opencv2/objdetect.hpp"
 #include <direct.h>
+#include <sys/stat.h>
+#include <stdio.h>
+
 
 
 using namespace cv;
@@ -137,6 +140,7 @@ private:
 	int face_size;
 	string box_text;
 	bool enabled = false;
+	string dir;
  
 	VideoCapture cap;
 	Ptr<FaceRecognizer> model;
@@ -158,6 +162,8 @@ public:
 		next_person = true;
 		box_text = format("Click C to start algorithm.");
 		enabled = false;
+		dir = "image_database";
+		_mkdir(dir.c_str());
 
 		model = createLBPHFaceRecognizer();
 	}
@@ -191,21 +197,19 @@ public:
 
 			string option_text;
 			option_text = format("P - check");
-			putText(output, option_text, Point(frame.cols - 140, frame.rows + 15), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
+			putText(output, option_text, Point(frame.cols - 160, frame.rows + 25), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
 			option_text = format("ESC - leave");
-			putText(output, option_text, Point(frame.cols - 140, frame.rows + 35), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
-			option_text = format("SPACE - add");
-			putText(output, option_text, Point(frame.cols - 140, frame.rows + 55), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
+			putText(output, option_text, Point(frame.cols - 160, frame.rows + 45), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
+			option_text = format("SPACE - add+save");
+			putText(output, option_text, Point(frame.cols - 160, frame.rows + 65), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
 			option_text = format("T - train");
-			putText(output, option_text, Point(frame.cols - 140, frame.rows + 75), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
-			option_text = format("S - save");
-			putText(output, option_text, Point(frame.cols - 140, frame.rows + 95), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
+			putText(output, option_text, Point(frame.cols - 160, frame.rows + 85), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
 			option_text = format("N - new");
-			putText(output, option_text, Point(frame.cols - 140, frame.rows + 115), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
+			putText(output, option_text, Point(frame.cols - 160, frame.rows + 105), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
 			option_text = format("C - start/stop");
-			putText(output, option_text, Point(frame.cols - 140, frame.rows + 135), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
+			putText(output, option_text, Point(frame.cols - 160, frame.rows + 125), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
 			option_text = format("To switch matching mode use numpad 1,2 or 3.");
-			putText(output, option_text, Point(20, frame.rows + 135), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
+			putText(output, option_text, Point(20, frame.rows + 125), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
 		}
 		putText(output, box_text, Point(frame.cols*0.5 - 270, frame.rows + (output.rows - frame.rows) / 2), FONT_HERSHEY_PLAIN, 1.0, CV_RGB(255, 255, 255), 2.0);
 		cv::imshow("camera", output);
@@ -216,7 +220,8 @@ public:
 		Mat gray;
 		cvtColor(frame_copy, gray, CV_BGR2GRAY);
 
-		string dir = "new_image_dir";
+		
+		string deeper_dir;
 		int key = waitKey(30);
 		if(!enabled)
 			switch (key)
@@ -243,7 +248,12 @@ public:
 			dataBase->read_frame(frame_copy, dataBase->getLabelIterator(), next_person);
 			if (next_person)
 				next_person = false;
-			box_text = format("New photo has been added.");
+
+			deeper_dir = dir + "/" + std::to_string(dataBase->getLabelIterator());
+			_mkdir(deeper_dir.c_str());
+			imwrite(deeper_dir + "/" + std::to_string(image_iter) + ".jpg", frame_copy);
+			image_iter++;
+			box_text = format("Image has been saved.");
 			break;
 		case 80://p i P 
 		case 112:
@@ -258,13 +268,6 @@ public:
 					box_text = format("Matching object to number %d:", prediction);
 				}
 			break;
-		case 83://s i S
-		case 115:
-			_mkdir(dir.c_str());
-			imwrite(dir + "/" + std::to_string(image_iter) + ".jpg", frame_copy);
-			image_iter++;
-			box_text = format("Image has been saved.");
-			break;
 		case 84://t i T
 		case 116:
 			box_text = format("Training ...");
@@ -275,6 +278,7 @@ public:
 			if (next_person == false) {
 				next_person = true;
 				dataBase->incrementLabelIterator();
+				image_iter = 0;
 			}
 			box_text = format("You can add new person photos!");
 			break;
@@ -329,9 +333,20 @@ public:
  
 	void fulfill_database() {
 		dataBase = new DataBase(this->classifier, this->face_size);
-		dataBase->read_directory("test_faces/RyanGosling");
-		dataBase->read_directory("test_faces/AngelinaJolie");
- 
+
+		int i = 1;
+		struct stat info;
+		while (true) {
+			string deeper_dir = dir + "/" + std::to_string(i);
+			if (stat(deeper_dir.c_str(), &info) != 0)
+				break;
+			else if (info.st_mode & S_IFDIR)
+				dataBase->read_directory(deeper_dir);
+			else
+				break;
+			i++;
+		}
+
 		if (dataBase->getImagesSize() > 0)
 			model->train(*(dataBase->getImages()), *(dataBase->getLabes()));
 	}
